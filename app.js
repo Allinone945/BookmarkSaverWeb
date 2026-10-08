@@ -879,10 +879,7 @@
       img.alt = '';
       img.loading = 'lazy';
       img.addEventListener('error', fallback, { once: true });
-      const src = new URL(chrome.runtime.getURL('/_favicon/'));
-      src.searchParams.set('pageUrl', url);
-      src.searchParams.set('size', '32');
-      img.src = src.toString();
+      img.src = `https://www.google.com/s2/favicons?domain=${host}&sz=32`;
       wrap.appendChild(img);
     } else {
       fallback();
@@ -1048,114 +1045,7 @@
   // Bundle Modal
   // =========================================================================
 
-  let currentTabsToBundle = [];
-
-  async function openBundleModal() {
-    const tags = getTags();
-    els.bundleExistingTags.replaceChildren();
-    if (tags.length > 0) {
-      const frag = document.createDocumentFragment();
-      for (const t of tags) {
-        const pill = el('span', 'tag-pill');
-        pill.textContent = t;
-        pill.addEventListener('click', () => {
-          els.bundleTagInput.value = t;
-          Array.from(els.bundleExistingTags.children).forEach(c => c.classList.remove('selected'));
-          pill.classList.add('selected');
-        });
-        frag.appendChild(pill);
-      }
-      els.bundleExistingTags.appendChild(frag);
-    }
-    els.bundleTagInput.value = '';
-    
-    const tabs = await chrome.tabs.query({ currentWindow: true });
-    currentTabsToBundle = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('edge://'));
-    
-    els.bundleTabList.replaceChildren();
-    currentTabsToBundle.forEach((tab, index) => {
-      const item = el('label', 'bundle-tab-item');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = false;
-      cb.dataset.index = index;
-      
-      const img = document.createElement('img');
-      img.src = tab.favIconUrl || '';
-      img.onerror = () => { img.style.display = 'none'; };
-      
-      const title = el('span', '', tab.title || tab.url);
-      
-      item.append(cb, img, title);
-      els.bundleTabList.appendChild(item);
-    });
-    
-    els.bundleCheckAll.checked = false;
-    els.bundleModal.hidden = false;
-  }
-
-  function closeBundleModal() {
-    els.bundleModal.hidden = true;
-    currentTabsToBundle = [];
-  }
-
-  async function saveBundleTabs() {
-    const checks = Array.from(els.bundleTabList.querySelectorAll('input[type="checkbox"]'));
-    const selectedIndices = checks.filter(c => c.checked).map(c => parseInt(c.dataset.index, 10));
-    
-    if (selectedIndices.length === 0) {
-      toast('請選擇至少一個分頁', 'warn');
-      return;
-    }
-    
-    const tagName = els.bundleTagInput.value.trim();
-    if (tagName) {
-      const tags = getTags();
-      if (!tags.includes(tagName)) {
-        tags.push(tagName);
-        saveTags(tags);
-      }
-    }
-    
-    const now = Date.now();
-    const tabsToClose = [];
-    
-    for (const idx of selectedIndices) {
-      const tab = currentTabsToBundle[idx];
-      tabsToClose.push(tab.id);
-      
-      const existing = state.links.find(l => l.url === tab.url);
-      if (existing) {
-        if (tagName) {
-          if (!Array.isArray(existing.tags)) existing.tags = [];
-          if (!existing.tags.includes(tagName)) existing.tags.push(tagName);
-        }
-      } else {
-        const link = {
-          id: generateId(),
-          createdAt: now,
-          title: (tab.title || '').trim() || tab.url,
-          url: tab.url,
-          isStarred: false,
-          isArchived: false,
-          isHearted: false,
-          isHiddenFromMain: false,
-          tags: tagName ? [tagName] : []
-        };
-        state.links.push(link);
-      }
-    }
-    
-    await persist();
-    try {
-      await chrome.tabs.remove(tabsToClose);
-    } catch(err) {
-      console.error(err);
-    }
-    
-    closeBundleModal();
-    toast(`已成功打包並關閉 ${tabsToClose.length} 個分頁`, 'success');
-  }
+  // Bundle Modal (Web 版已移除)
 
   // =========================================================================
   // Filter Modal
