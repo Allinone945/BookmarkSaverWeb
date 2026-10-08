@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="書籤小幫手：記錄網頁 URL 與標題，支援星號置頂、愛心收藏、封存與 Dropbox 自動同步。">
+  <title>書籤小幫手 BookmarkSaver Web</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- SVG 圖示 (用 SVG 取代 Emoji，避免 Edge 渲染破圖) -->
+  <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></symbol>
+    <symbol id="i-unarchive" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h2"/><path d="M20 8v11a2 2 0 0 1-2 2h-2"/><path d="m9 15 3-3 3 3"/><path d="M12 12v9"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></symbol>
+  </svg>
+
+  <div class="app">
+    <!-- 標題列 -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo"><svg class="i"><use href="#i-bookmark"/></svg></div>
+        <div class="brand-text">
+          <h1>書籤小幫手</h1>
+          <p class="subtitle">BookmarkSaver · Dropbox Sync</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="syncStatus" class="sync-pill" data-state="idle" type="button" title="同步狀態">
+          <span class="dot"></span><span id="syncStatusText">本機</span>
+        </button>
+        <button id="settingsBtn" class="icon-btn" type="button" title="Dropbox 同步設定" aria-label="Dropbox 同步設定" aria-expanded="false">
+          <svg class="i"><use href="#i-gear"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 設定面板 (齒輪展開) -->
+    <section id="settingsPanel" class="settings" aria-label="Dropbox 同步設定" hidden>
+      <div class="settings-head">
+        <h2>Dropbox 同步設定</h2>
+        <a class="text-link" href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer">
+          App Console <svg class="i"><use href="#i-external"/></svg>
+        </a>
+      </div>
+
+      <div class="field">
+        <label for="dbxAppKey">App Key</label>
+        <input id="dbxAppKey" type="text" autocomplete="off" spellcheck="false" placeholder="請輸入 App Key">
+      </div>
+      <div class="field">
+        <label for="dbxAppSecret">App Secret</label>
+        <div class="input-wrap">
+          <input id="dbxAppSecret" type="password" autocomplete="off" spellcheck="false" placeholder="請輸入 App Secret">
+          <button class="reveal-btn" type="button" data-target="dbxAppSecret" title="顯示 / 隱藏" aria-label="顯示 App Secret"><svg class="i"><use href="#i-eye"/></svg></button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="dbxRefreshToken">Refresh Token</label>
+        <div class="input-wrap">
+          <input id="dbxRefreshToken" type="password" autocomplete="off" spellcheck="false" placeholder="token_access_type=offline 取得的 Token">
+          <button class="reveal-btn" type="button" data-target="dbxRefreshToken" title="顯示 / 隱藏" aria-label="顯示 Refresh Token"><svg class="i"><use href="#i-eye"/></svg></button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="dbxFilePath">JSON 檔案路徑</label>
+        <input id="dbxFilePath" type="text" autocomplete="off" spellcheck="false" placeholder="/MyLinks.json">
+      </div>
+      <p class="hint">App 權限若為「App folder」，路徑會相對於 <code>應用程式/你的App名稱/</code>。</p>
+
+      <button id="saveTokenBtn" class="secondary-btn" type="button">
+        <svg class="i"><use href="#i-check"/></svg><span>儲存並連線</span>
+      </button>
+      <div class="settings-row">
+        <button id="syncUpBtn" class="ghost-btn" type="button" title="通常不需要按，變更會自動上傳">
+          <svg class="i"><use href="#i-upload"/></svg><span>強制上傳</span>
+        </button>
+        <button id="syncDownBtn" class="ghost-btn" type="button" title="以雲端資料覆蓋本機">
+          <svg class="i"><use href="#i-download"/></svg><span>從雲端下載</span>
+        </button>
+      </div>
+      <div class="settings-row">
+        <button id="exportJsonBtn" class="ghost-btn" type="button" title="手動匯出 JSON 備份">
+          <svg class="i"><use href="#i-download"/></svg><span>匯出 JSON</span>
+        </button>
+        <button id="importJsonBtn" class="ghost-btn" type="button" title="手動匯入 JSON 檔案" style="position: relative;">
+          <svg class="i"><use href="#i-upload"/></svg><span>匯入 JSON</span>
+          <input type="file" id="importJsonInput" accept=".json" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
+        </button>
+      </div>
+      <p id="lastSyncText" class="last-sync"></p>
+    </section>
+
+    <!-- 記錄網頁 -->
+    <div style="display:flex; gap: 8px; width: 100%; margin-bottom: 12px; padding: 0 12px;">
+      <input id="addUrlInput" class="input-base" type="url" placeholder="貼上網址 (https://...)" style="flex: 2; height: 38px; border-radius: 8px; border: 1px solid var(--border); padding: 0 12px; background: var(--input-bg); color: var(--text);">
+      <input id="addTitleInput" class="input-base" type="text" placeholder="標題 (選填)" style="flex: 1; height: 38px; border-radius: 8px; border: 1px solid var(--border); padding: 0 12px; background: var(--input-bg); color: var(--text);">
+      <button id="addCurrentBtn" class="primary-btn pulse" type="button" aria-label="新增網址" style="height: 38px; padding: 0 16px; border-radius: 8px;">
+        <svg class="i" id="addBtnIcon" style="margin: 0;"><use href="#i-plus"/></svg>
+      </button>
+    </div>
+
+    <!-- 搜尋列 -->
+    <div class="search-bar">
+      <svg class="i"><use href="#i-search"/></svg>
+      <input id="searchInput" type="text" autocomplete="off" spellcheck="false" placeholder="搜尋書籤 (標題或網址)...">
+    </div>
+
+    <!-- 分頁 -->
+    <nav class="tabs" role="tablist" data-active="0">
+      <button id="mainViewBtn" class="tab active" type="button" role="tab" data-view="main" aria-selected="true">
+        <svg class="i"><use href="#i-list"/></svg><span>主清單</span><span class="count" id="mainCount">0</span>
+      </button>
+      <button id="favoriteViewBtn" class="tab" type="button" role="tab" data-view="favorite" aria-selected="false">
+        <svg class="i"><use href="#i-heart"/></svg><span>收藏區</span><span class="count" id="favoriteCount">0</span>
+      </button>
+      <button id="archiveViewBtn" class="tab" type="button" role="tab" data-view="archive" aria-selected="false">
+        <svg class="i"><use href="#i-archive"/></svg><span>封存區</span><span class="count" id="archiveCount">0</span>
+      </button>
+      <button id="topicViewBtn" class="tab" type="button" role="tab" data-view="topic" aria-selected="false">
+        <svg class="i"><use href="#i-tag"/></svg><span>主題區</span><span class="count" id="topicCount">0</span>
+      </button>
+      <span class="tab-indicator" aria-hidden="true"></span>
+    </nav>
+
+    <!-- 連結清單 -->
+    <div id="topicActions" class="topic-actions" hidden>
+      <button id="createTagBtn" class="ghost-btn" style="flex: 1; width: 32px; padding: 0;" type="button" title="新增主題"><svg class="i"><use href="#i-plus"/></svg> <span>新增主題</span></button>
+      <button id="openFilterBtn" class="ghost-btn" style="flex: 1; width: 32px; padding: 0;" type="button" title="篩選顯示主題"><svg class="i"><use href="#i-filter"/></svg> <span>篩選主題</span></button>
+    </div>
+    <main class="list-container" id="listContainer">
+      <ul id="linkList" class="link-list"></ul>
+      <div id="emptyState" class="empty" hidden>
+        <div class="empty-icon"><svg class="i"><use id="emptyIconUse" href="#i-bookmark"/></svg></div>
+        <p id="emptyTitle" class="empty-title">還沒有任何連結</p>
+        <p id="emptyDesc" class="empty-desc">點擊上方「記錄當前網頁」開始收藏吧！</p>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <span id="footerTotal"></span>
+      <span id="footerSync"></span>
+    </footer>
+  </div>
+
+  <!-- 提示訊息 -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+    <span id="toastText"></span>
+    <button id="toastAction" class="toast-action" type="button" hidden>復原</button>
+  </div>
+
+  <!-- (Web版已移除打包開啟分頁 Modal) -->
+  <!-- 標籤設定 Modal -->
+  <div id="tagModal" class="modal-backdrop" hidden>
+    <div class="modal-box">
+      <h3 class="modal-title">設定標籤</h3>
+      <div id="tagCheckboxes" class="tag-checkboxes"></div>
+      <div class="field" style="margin-top: 10px;">
+        <label>新增標籤</label>
+        <input type="text" id="newTagInput" placeholder="輸入新標籤名稱，按 Enter 新增" autocomplete="off">
+      </div>
+      <div class="modal-actions" style="margin-top: 14px;">
+        <button type="button" class="ghost-btn" id="tagCancelBtn">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tag Filter Modal -->
+  <div id="filterModal" class="modal-backdrop" hidden>
+    <div class="modal-box">
+      <h3 class="modal-title">篩選顯示的主題</h3>
+      <div id="filterCheckboxes" class="tag-checkboxes"></div>
+      <div class="modal-actions" style="margin-top: 14px;">
+        <button id="filterCancelBtn" class="ghost-btn" type="button">取消</button>
+        <button id="filterSaveBtn" class="secondary-btn" type="button">套用篩選</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div id="groupContextMenu" class="context-menu" hidden>
+    <button id="collapseAllBtn" type="button">全部折疊</button>
+    <button id="expandAllBtn" type="button">全部展開</button>
+    <button id="archiveAllBtn" type="button">全部封存此主題</button>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
