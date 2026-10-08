@@ -184,6 +184,7 @@
     });
 
     els.addBtn.addEventListener('click', addCurrentPage);
+    els.addUrlInput.addEventListener('input', updateAddButton);
     els.tabButtons.forEach((btn) => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 
     document.addEventListener('keydown', (e) => {
@@ -336,10 +337,13 @@
     state.links = next;
     if (changed) {
       state.version++;
-      await chrome.storage.local.set({ savedLinks: state.links });
+      const store = JSON.parse(localStorage.getItem('BookmarkSaverStore') || '{}');
+      store.savedLinks = state.links;
+      localStorage.setItem('BookmarkSaverStore', JSON.stringify(store));
       render();
     }
-    markSynced(res.syncedAt);
+    
+    markSynced(Date.now());
 
     if (mergedCount > 0) {
       await requestUpload();
@@ -348,22 +352,52 @@
       toast(`已從 Dropbox 載入 ${next.length} 筆連結`, 'success');
     }
     return true;
+    } catch (err) {
+      handleSyncError({ code: err.message.includes('Token') ? 'AUTH' : 'ERROR', error: err.message }, manual);
+      return false;
+    }
   }
 
   async function requestUpload({ manual = false } = {}) {
     const req = ++state.uploadReq;
     setStatus('syncing', '上傳中…');
 
-    const res = await send({ type: 'upload' });
-    if (req !== state.uploadReq) return res.ok; // 已有更新的上傳請求
+    try {
+      const token = await getAccessToken();
+      const store = JSON.parse(localStorage.getItem('BookmarkSaverStore') || '{}');
+      const apiArg = JSON.stringify({
+        path: normalizePath(store.dbxFilePath),
+        mode: 'overwrite',
+        autorename: false,
+        mute: true,
+        strict_conflict: false
+      }).replace(/[\u007F-\uFFFF]/g, chr => '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).slice(-4));
 
-    if (!res.ok) {
-      handleSyncError(res, manual);
+      const fileData = JSON.stringify(state.links, null, 2);
+      
+      const res = await fetch(UPLOAD_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Dropbox-API-Arg': apiArg,
+          'Content-Type': 'application/octet-stream'
+        },
+        body: fileData
+      });
+
+      if (req !== state.uploadReq) return true; // 已有更新的上傳請求
+
+      if (!res.ok) throw new Error('上傳失敗 HTTP ' + res.status);
+      
+      markSynced(Date.now());
+      if (manual) toast(`已上傳 ${state.links.length} 筆連結到 Dropbox`, 'success');
+      return true;
+
+    } catch (err) {
+      if (req !== state.uploadReq) return false;
+      handleSyncError({ code: err.message.includes('Token') ? 'AUTH' : 'ERROR', error: err.message }, manual);
       return false;
     }
-    if (!res.skipped) markSynced(res.syncedAt);
-    if (manual) toast(`已上傳 ${state.links.length} 筆連結到 Dropbox`, 'success');
-    return true;
   }
 
   function handleSyncError(res, manual) {
@@ -898,17 +932,11 @@
   }
 
   function updateAddButton() {
-    const tab = state.currentTab;
-    const existing = tab && tab.url ? state.links.find((l) => l.url === tab.url) : null;
+    const url = els.addUrlInput.value.trim();
+    const existing = url ? state.links.find((l) => l.url === url) : null;
     els.addBtn.classList.toggle('is-saved', !!existing);
     els.addBtn.querySelector('use').setAttribute('href', existing ? '#i-check' : '#i-plus');
-    if (existing) {
-      els.addBtnLabel.textContent = `此頁已在${VIEW_LABEL[viewOf(existing)]}`;
-      els.addBtnSub.textContent = '點擊前往查看';
-    } else {
-      els.addBtnLabel.textContent = '記錄當前網頁';
-      els.addBtnSub.textContent = tab && tab.title ? tab.title : '';
-    }
+    els.addBtn.title = existing ? `此頁已在${VIEW_LABEL[viewOf(existing)]}` : '新增網址';
   }
 
   function updateFooter() {
